@@ -15,7 +15,7 @@ const TYPE_COLORS = {
 
 const ALL_TYPES = ['rule', 'constraint', 'reference', 'tool', 'persona'];
 
-export function AgentConfigCard({ card, onClick, onEdit, onDelete, onDuplicate, onUpdateType, agents }) {
+export function AgentConfigCard({ card, onClick, onEdit, onDelete, onDuplicate, onUpdateType, agents, collapsed }) {
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
 
   return (
@@ -65,8 +65,8 @@ export function AgentConfigCard({ card, onClick, onEdit, onDelete, onDuplicate, 
       </div>
 
       {/* Content preview */}
-      {card.content && (
-        <div className="mt-2">
+      {!collapsed && card.content && (
+        <div className="mt-2 max-h-60 overflow-y-auto">
           <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words leading-relaxed">
             {card.content}
           </p>

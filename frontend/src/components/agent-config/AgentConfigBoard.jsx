@@ -5,7 +5,7 @@ import { AgentConfigEditModal } from './AgentConfigEditModal';
 import { AgentConfigHistoryPanel } from './AgentConfigHistoryPanel';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Undo2, Save, History } from 'lucide-react';
+import { Search, Undo2, Save, History, Minimize2, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function AgentConfigBoard() {
@@ -25,6 +25,7 @@ export function AgentConfigBoard() {
   const [dropIndicator, setDropIndicator] = useState(null); // { agentId, index }
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   const allFileNames = useMemo(() => {
     const names = new Set();
@@ -235,6 +236,17 @@ export function AgentConfigBoard() {
         </Button>
 
         <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCollapsed(c => !c)}
+          className="gap-1.5"
+          title={collapsed ? 'Expand cards' : 'Collapse cards'}
+        >
+          {collapsed ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+          {collapsed ? 'Expanded' : 'Compact'}
+        </Button>
+
+        <Button
           size="sm"
           onClick={handleSaveAll}
           disabled={!isDirty || saving}
@@ -293,6 +305,7 @@ export function AgentConfigBoard() {
             dropIndicator={dropIndicator}
             onCardDragOver={handleCardDragOver}
             onCardDragLeave={handleCardDragLeave}
+            collapsed={collapsed}
           />
         ))}
       </div>

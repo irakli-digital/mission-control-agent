@@ -22,6 +22,7 @@ export function AgentConfigColumn({
   dropIndicator,
   onCardDragOver,
   onCardDragLeave,
+  collapsed,
 }) {
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -39,7 +40,7 @@ export function AgentConfigColumn({
   return (
     <div
       className={cn(
-        'flex-shrink-0 w-[280px] md:w-[300px] flex flex-col rounded-lg transition-colors',
+        'flex-shrink-0 w-[calc(33.333%-1rem)] min-w-[400px] flex flex-col rounded-lg transition-colors',
         dragOverAgent === agent.id && 'bg-primary/5 ring-1 ring-primary/20'
       )}
       onDragOver={handleDragOver}
@@ -96,6 +97,7 @@ export function AgentConfigColumn({
                   onDuplicate={onDuplicateCard}
                   onUpdateType={onUpdateCardType}
                   agents={agents}
+                  collapsed={collapsed}
                 />
               </div>
               {/* Drop indicator after last card */}
