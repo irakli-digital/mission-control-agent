@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Maximize2 } from 'lucide-react';
+import { AgentConfigFullEditor } from './AgentConfigFullEditor';
 
 const TYPE_COLORS = {
   rule: 'bg-blue-500/20 text-blue-400',
@@ -17,6 +19,7 @@ export function AgentConfigEditModal({ card, open, onOpenChange, onSave, mdFiles
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [file, setFile] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     if (card) {
@@ -44,11 +47,28 @@ export function AgentConfigEditModal({ card, open, onOpenChange, onSave, mdFiles
     onOpenChange(false);
   };
 
+  if (isFullscreen) {
+    return (
+      <AgentConfigFullEditor
+        card={{ ...card, title, content, file, type: detectedType }}
+        onClose={() => { setIsFullscreen(false); onOpenChange(false); }}
+        onSave={onSave}
+        mdFiles={mdFiles}
+        isNew={isNew}
+      />
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{isNew ? 'New Card' : 'Edit Card'}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>{isNew ? 'New Card' : 'Edit Card'}</DialogTitle>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsFullscreen(true)} title="Expand to fullscreen editor">
+              <Maximize2 className="w-4 h-4" />
+            </Button>
+          </div>
         </DialogHeader>
         <div className="space-y-4">
           <div>
