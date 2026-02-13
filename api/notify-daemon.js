@@ -39,7 +39,7 @@ async function deliverNotifications() {
       // Try to send via clawdbot sessions_send
       // This will wake the agent if they have an active session
       try {
-        execSync(`clawdbot sessions send --session "${n.to_session}" --message "${msg.replace(/"/g, '\\"')}"`, {
+        execSync(`openclaw sessions send --session "${n.to_session}" --message "${msg.replace(/"/g, '\\"')}"`, {
           timeout: 10000,
           stdio: 'pipe'
         });

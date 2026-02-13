@@ -157,6 +157,58 @@ export const ICONS = {
   target: Target,
 };
 
+// Content Calendar Status Configuration
+export const CONTENT_STATUS_CONFIG = {
+  idea: {
+    label: 'Ideas',
+    icon: Zap,
+    color: 'text-yellow-400',
+    bgColor: 'bg-yellow-500/10',
+  },
+  scripted: {
+    label: 'Scripted',
+    icon: ClipboardList,
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/10',
+  },
+  recording: {
+    label: 'Recording',
+    icon: Circle,
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/10',
+  },
+  editing: {
+    label: 'Editing',
+    icon: RefreshCw,
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/10',
+  },
+  scheduled: {
+    label: 'Scheduled',
+    icon: Calendar,
+    color: 'text-orange-400',
+    bgColor: 'bg-orange-500/10',
+  },
+  published: {
+    label: 'Published',
+    icon: CheckCircle2,
+    color: 'text-green-400',
+    bgColor: 'bg-green-500/10',
+  },
+};
+
+export const CONTENT_STATUS_COLS = ['idea', 'scripted', 'recording', 'editing', 'scheduled', 'published'];
+
+// Platform configuration
+export const PLATFORM_CONFIG = {
+  youtube: { label: 'YouTube', emoji: '📺' },
+  tiktok: { label: 'TikTok', emoji: '🎵' },
+  instagram: { label: 'Instagram', emoji: '📸' },
+  twitter: { label: 'Twitter/X', emoji: '🐦' },
+  linkedin: { label: 'LinkedIn', emoji: '💼' },
+  blog: { label: 'Blog', emoji: '📝' },
+};
+
 // API base URL
 export const API_BASE = import.meta.env.VITE_API_URL || '';
 

@@ -1,6 +1,24 @@
 import { useState, useCallback } from 'react';
 import { API_BASE } from '@/lib/constants';
 
+function getAuthHeader() {
+  const creds = localStorage.getItem('mc_credentials');
+  if (!creds) return {};
+  return { Authorization: `Basic ${btoa(creds)}` };
+}
+
+export function setCredentials(user, pass) {
+  localStorage.setItem('mc_credentials', `${user}:${pass}`);
+}
+
+export function clearCredentials() {
+  localStorage.removeItem('mc_credentials');
+}
+
+export function hasCredentials() {
+  return !!localStorage.getItem('mc_credentials');
+}
+
 /**
  * Base API hook with loading and error states
  */
@@ -12,12 +30,26 @@ export function useApi() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}${path}`, options);
+      const res = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers: {
+          ...getAuthHeader(),
+          ...(options.headers || {}),
+        },
+      });
+      if (res.status === 401) {
+        clearCredentials();
+        window.dispatchEvent(new Event('mc:auth-required'));
+        throw new Error('Authentication required');
+      }
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
-      const data = await res.json();
-      return data;
+      const contentType = res.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        return await res.json();
+      }
+      return await res.text();
     } catch (err) {
       setError(err.message);
       throw err;
@@ -42,9 +74,21 @@ export function useApi() {
     });
   }, [fetchJSON]);
 
+  const deleteJSON = useCallback(async (path) => {
+    return fetchJSON(path, { method: 'DELETE' });
+  }, [fetchJSON]);
+
+  const putJSON = useCallback(async (path, body) => {
+    return fetchJSON(path, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }, [fetchJSON]);
+
   const clearError = useCallback(() => setError(null), []);
 
-  return { loading, error, fetchJSON, postJSON, patchJSON, clearError };
+  return { loading, error, fetchJSON, postJSON, patchJSON, deleteJSON, putJSON, clearError };
 }
 
 /**

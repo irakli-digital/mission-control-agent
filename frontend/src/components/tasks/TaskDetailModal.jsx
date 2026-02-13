@@ -29,12 +29,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { STATUS_CONFIG, STATUS_COLS } from '@/lib/constants';
 import { useTask } from '@/hooks/useTasks';
+import { apiPost, apiDelete } from '@/lib/fetch';
 import { timeAgo, formatTime, formatTokens } from '@/hooks/useApi';
 import { LoadingState } from '@/components/common';
 import { cn } from '@/lib/utils';
 
 export function TaskDetailModal({ taskId, agents, open, onOpenChange, onRefresh }) {
-  const { task, loading, addTime, addTokens, addComment } = useTask(taskId);
+  const { task, loading, addTime, addTokens, addComment, refresh: refreshTask } = useTask(taskId);
   const [comment, setComment] = useState('');
   const [commentBy, setCommentBy] = useState(agents[0]?.id?.toString() || '');
   const [editingTime, setEditingTime] = useState(false);
@@ -53,6 +54,28 @@ export function TaskDetailModal({ taskId, agents, open, onOpenChange, onRefresh 
       onRefresh?.();
     } catch (err) {
       console.error('Failed to update status:', err);
+    }
+  };
+
+  const handleAssign = async (agentId) => {
+    if (!task) return;
+    try {
+      await apiPost('/api/tasks/bulk/assign', { ids: [task.id], agent_id: parseInt(agentId) });
+      await refreshTask();
+      onRefresh?.();
+    } catch (err) {
+      console.error('Failed to assign:', err);
+    }
+  };
+
+  const handleUnassign = async (agentId) => {
+    if (!task) return;
+    try {
+      await apiDelete(`/api/tasks/${task.id}/assignees/${agentId}`);
+      await refreshTask();
+      onRefresh?.();
+    } catch (err) {
+      console.error('Failed to unassign:', err);
     }
   };
 
@@ -262,16 +285,34 @@ export function TaskDetailModal({ taskId, agents, open, onOpenChange, onRefresh 
               </div>
 
               {/* Assignees */}
-              {task.assignees?.length > 0 && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-muted-foreground">Assigned:</span>
-                  {task.assignees.map((a) => (
-                    <Badge key={a.id} variant="secondary" className="gap-1">
-                      {a.emoji} {a.name}
-                    </Badge>
-                  ))}
-                </div>
-              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-muted-foreground">Assigned:</span>
+                {task.assignees?.map((a) => (
+                  <Badge
+                    key={a.id}
+                    variant="secondary"
+                    className="gap-1 cursor-pointer hover:bg-destructive/20"
+                    onClick={() => handleUnassign(a.id)}
+                    title={`Click to unassign ${a.name}`}
+                  >
+                    {a.emoji} {a.name} <X className="w-3 h-3" />
+                  </Badge>
+                ))}
+                <Select onValueChange={handleAssign}>
+                  <SelectTrigger className="h-6 w-28 text-xs">
+                    <SelectValue placeholder="+ Assign" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {agents
+                      .filter((a) => !task.assignees?.some((ta) => ta.id === a.id))
+                      .map((a) => (
+                        <SelectItem key={a.id} value={a.id.toString()}>
+                          {a.emoji} {a.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <Separator />

@@ -3,11 +3,10 @@ import { KanbanColumn } from './KanbanColumn';
 import { STATUS_COLS } from '@/lib/constants';
 import { LoadingState } from '@/components/common';
 
-export function KanbanBoard({ tasks, loading, onTaskClick, onMoveTask }) {
+export function KanbanBoard({ tasks, loading, onTaskClick, onMoveTask, selectedTaskIds, onToggleSelect, onSelectAll, onAddTask }) {
   const [dragging, setDragging] = useState(null);
   const [dragOver, setDragOver] = useState(null);
 
-  // Filter out recurring tasks - they go in separate section
   const nonRecurring = tasks.filter((t) => !t.recurrence);
 
   const handleDragStart = useCallback((e, task) => {
@@ -22,9 +21,7 @@ export function KanbanBoard({ tasks, loading, onTaskClick, onMoveTask }) {
   }, []);
 
   const handleDragOver = useCallback((e, status) => {
-    if (status) {
-      setDragOver(status);
-    }
+    if (status) setDragOver(status);
   }, []);
 
   const handleDrop = useCallback(async (e, status) => {
@@ -32,15 +29,10 @@ export function KanbanBoard({ tasks, loading, onTaskClick, onMoveTask }) {
     const taskId = e.dataTransfer.getData('taskId');
     setDragOver(null);
     setDragging(null);
-
-    if (taskId) {
-      await onMoveTask?.(parseInt(taskId, 10), status);
-    }
+    if (taskId) await onMoveTask?.(parseInt(taskId, 10), status);
   }, [onMoveTask]);
 
-  if (loading) {
-    return <LoadingState type="kanban" />;
-  }
+  if (loading) return <LoadingState type="kanban" />;
 
   const columns = STATUS_COLS.map((status) => ({
     status,
@@ -48,7 +40,7 @@ export function KanbanBoard({ tasks, loading, onTaskClick, onMoveTask }) {
   }));
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-4 -mx-2 px-2">
+    <div className="flex flex-col sm:flex-row gap-3 sm:overflow-x-auto pb-4 -mx-2 px-2">
       {columns.map((col) => (
         <KanbanColumn
           key={col.status}
@@ -61,6 +53,10 @@ export function KanbanBoard({ tasks, loading, onTaskClick, onMoveTask }) {
           onDrop={handleDrop}
           dragOver={dragOver}
           dragging={dragging}
+          selectedTaskIds={selectedTaskIds}
+          onToggleSelect={onToggleSelect}
+          onSelectAll={onSelectAll}
+          onAddTask={onAddTask}
         />
       ))}
     </div>

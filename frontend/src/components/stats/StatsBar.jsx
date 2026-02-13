@@ -4,7 +4,7 @@ import { formatTime, formatTokens } from '@/hooks/useApi';
 import { LoadingState } from '@/components/common';
 import { cn } from '@/lib/utils';
 
-export function StatsBar({ stats, loading }) {
+export function StatsBar({ stats, loading, filterStatus, onFilterStatus }) {
   if (loading) {
     return <LoadingState type="stats" />;
   }
@@ -12,20 +12,27 @@ export function StatsBar({ stats, loading }) {
   if (!stats) return null;
 
   const items = [
-    { label: 'Total', value: stats.total, color: 'text-foreground' },
-    { label: 'In Progress', value: stats.in_progress, color: 'text-blue-400' },
-    { label: 'Review', value: stats.review, color: 'text-purple-400' },
-    { label: 'Done', value: stats.done, color: 'text-green-400' },
-    { label: 'Blocked', value: stats.blocked, color: 'text-destructive' },
+    { label: 'Total', value: stats.total, color: 'text-foreground', status: null },
+    { label: 'In Progress', value: stats.in_progress, color: 'text-blue-400', status: 'in_progress' },
+    { label: 'Review', value: stats.review, color: 'text-purple-400', status: 'review' },
+    { label: 'Done', value: stats.done, color: 'text-green-400', status: 'done' },
+    { label: 'Blocked', value: stats.blocked, color: 'text-destructive', status: 'blocked' },
   ];
 
   return (
     <div className="flex gap-4 sm:gap-6 mb-6 px-1 overflow-x-auto">
       {items.map((item) => (
-        <div key={item.label} className="text-center shrink-0">
+        <button
+          key={item.label}
+          onClick={() => onFilterStatus?.(filterStatus === item.status ? null : item.status)}
+          className={cn(
+            'text-center shrink-0 rounded-lg px-2 py-1 transition-colors cursor-pointer',
+            filterStatus === item.status && item.status !== null && 'bg-primary/10 ring-1 ring-primary/30',
+          )}
+        >
           <div className={cn('text-lg sm:text-xl font-bold', item.color)}>{item.value}</div>
           <div className="text-[10px] sm:text-xs text-muted-foreground">{item.label}</div>
-        </div>
+        </button>
       ))}
 
       {stats.total_time > 0 && (

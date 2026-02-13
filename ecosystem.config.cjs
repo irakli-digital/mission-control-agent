@@ -7,6 +7,8 @@ module.exports = {
       env: {
         NEON_DATABASE_URL: process.env.NEON_DATABASE_URL,
         MC_PORT: 3847,
+        MC_ADMIN_USER: process.env.MC_ADMIN_USER || 'admin',
+        MC_ADMIN_PASS: process.env.MC_ADMIN_PASS || 'admin',
       },
     },
     {

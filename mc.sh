@@ -58,7 +58,13 @@ COMMANDS:
     ${GREEN}done${NC} <task_id>
         Mark task as complete
 
-    ${GREEN}comment${NC} <task_id> <text> [--agent AGENT_ID]
+    ${GREEN}update${NC} <task_id> [-s STATUS] [-a AGENT_NAME] [-b AGENT_NAME]
+        Update task status and/or assignment
+        -s: new status (inbox, assigned, in_progress, blocked, review, done)
+        -a: assign to agent (by name)
+        -b: log activity as agent (by name)
+
+    ${GREEN}comment${NC} <task_id> <text> [--agent AGENT_ID] [-b AGENT_NAME]
         Add comment to task
 
     ${GREEN}watch${NC} [--interval SECONDS]
@@ -112,15 +118,36 @@ ENVIRONMENT:
 EOF
 }
 
+function resolve_agent_id() {
+    local name="$1"
+    local agents_json=$(api_get "/agents")
+    local id=$(echo "$agents_json" | jq -r --arg name "$name" '.[] | select(.name | ascii_downcase == ($name | ascii_downcase)) | .id')
+    if [ -z "$id" ]; then
+        echo -e "${RED}❌ Agent not found: $name${NC}" >&2
+        return 1
+    fi
+    echo "$id"
+}
+
+MC_USER="${MC_ADMIN_USER:-admin}"
+MC_PASS="${MC_ADMIN_PASS:-admin}"
+AUTH_HEADER="Authorization: Basic $(echo -n "${MC_USER}:${MC_PASS}" | base64)"
+
 function api_get() {
     local endpoint="$1"
-    curl -s "${API_URL}${endpoint}"
+    local response
+    response=$(curl -s -H "$AUTH_HEADER" "${API_URL}${endpoint}")
+    if echo "$response" | jq -e '.error' >/dev/null 2>&1; then
+        echo -e "${RED}❌ API error: $(echo "$response" | jq -r '.error')${NC}" >&2
+        return 1
+    fi
+    echo "$response"
 }
 
 function api_post() {
     local endpoint="$1"
     local data="$2"
-    curl -s -X POST "${API_URL}${endpoint}" \
+    curl -s -X POST -H "$AUTH_HEADER" "${API_URL}${endpoint}" \
         -H "Content-Type: application/json" \
         -d "$data"
 }
@@ -128,7 +155,7 @@ function api_post() {
 function api_patch() {
     local endpoint="$1"
     local data="$2"
-    curl -s -X PATCH "${API_URL}${endpoint}" \
+    curl -s -X PATCH -H "$AUTH_HEADER" "${API_URL}${endpoint}" \
         -H "Content-Type: application/json" \
         -d "$data"
 }
@@ -302,6 +329,8 @@ function cmd_create() {
     local desc=""
     local priority="normal"
     local assignees=""
+    local assign_name=""
+    local by_name=""
     
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -309,7 +338,7 @@ function cmd_create() {
                 desc="$2"
                 shift 2
                 ;;
-            --priority)
+            --priority|-p)
                 priority="$2"
                 shift 2
                 ;;
@@ -317,11 +346,31 @@ function cmd_create() {
                 assignees="$2"
                 shift 2
                 ;;
+            -a)
+                assign_name="$2"
+                shift 2
+                ;;
+            -b)
+                by_name="$2"
+                shift 2
+                ;;
             *)
                 shift
                 ;;
         esac
     done
+
+    # Resolve -a agent name to ID
+    if [ -n "$assign_name" ] && [ -z "$assignees" ]; then
+        local aid=$(resolve_agent_id "$assign_name")
+        if [ -n "$aid" ]; then assignees="$aid"; fi
+    fi
+
+    # Resolve -b agent name to ID for created_by
+    local created_by=""
+    if [ -n "$by_name" ]; then
+        created_by=$(resolve_agent_id "$by_name")
+    fi
     
     # Build JSON
     json=$(jq -n \
@@ -329,6 +378,10 @@ function cmd_create() {
         --arg desc "$desc" \
         --arg priority "$priority" \
         '{title: $title, description: $desc, priority: $priority}')
+    
+    if [ -n "$created_by" ]; then
+        json=$(echo "$json" | jq --argjson cb "$created_by" '. + {created_by: $cb}')
+    fi
     
     if [ -n "$assignees" ]; then
         IFS=',' read -ra AGENT_IDS <<< "$assignees"
@@ -379,6 +432,54 @@ function cmd_done() {
     echo -e "${GREEN}✅ Completed task #$task_id${NC}"
 }
 
+function cmd_update() {
+    if [ $# -lt 1 ]; then
+        echo -e "${RED}Usage: mc update <task_id> [-s STATUS] [-a AGENT_NAME] [-b AGENT_NAME]${NC}"
+        exit 1
+    fi
+
+    local task_id="$1"
+    shift
+
+    local status=""
+    local assign_name=""
+    local by_name=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -s) status="$2"; shift 2 ;;
+            -a) assign_name="$2"; shift 2 ;;
+            -b) by_name="$2"; shift 2 ;;
+            *) shift ;;
+        esac
+    done
+
+    # Update status if provided
+    if [ -n "$status" ]; then
+        api_patch "/tasks/${task_id}" "{\"status\": \"$status\"}" > /dev/null
+        echo -e "${GREEN}✅ Task #$task_id status → $status${NC}"
+    fi
+
+    # Assign agent if provided
+    if [ -n "$assign_name" ]; then
+        local assign_id=$(resolve_agent_id "$assign_name")
+        if [ -n "$assign_id" ]; then
+            api_post "/tasks/${task_id}/assign" "{\"agent_id\": $assign_id}" > /dev/null 2>&1 || \
+                api_patch "/tasks/${task_id}" "{\"status\": \"assigned\"}" > /dev/null
+            echo -e "${GREEN}✅ Task #$task_id assigned to $assign_name${NC}"
+        fi
+    fi
+
+    # Log activity if -b provided
+    if [ -n "$by_name" ]; then
+        local by_id=$(resolve_agent_id "$by_name")
+        if [ -n "$by_id" ] && [ -n "$status" ]; then
+            local msg="Updated task #${task_id} to ${status}"
+            api_post "/activities" "{\"type\": \"status_changed\", \"agent_id\": $by_id, \"task_id\": $task_id, \"message\": \"$msg\"}" > /dev/null 2>&1
+        fi
+    fi
+}
+
 function cmd_comment() {
     if [ $# -lt 2 ]; then
         echo -e "${RED}Usage: mc comment <task_id> <text> [--agent AGENT_ID]${NC}"
@@ -395,6 +496,11 @@ function cmd_comment() {
         case "$1" in
             --agent)
                 agent_id="$2"
+                shift 2
+                ;;
+            -b)
+                local by_id=$(resolve_agent_id "$2")
+                if [ -n "$by_id" ]; then agent_id=$by_id; fi
                 shift 2
                 ;;
             *)
@@ -469,6 +575,10 @@ case "${1:-help}" in
     done)
         shift
         cmd_done "$@"
+        ;;
+    update)
+        shift
+        cmd_update "$@"
         ;;
     comment)
         shift

@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { API_BASE, REFRESH_INTERVAL } from '@/lib/constants';
+import { REFRESH_INTERVAL } from '@/lib/constants';
+import { apiGet } from '@/lib/fetch';
 
-/**
- * Hook for fetching stats, projects, and tags
- */
 export function useStats() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -11,16 +9,11 @@ export function useStats() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/stats`);
-      if (!res.ok) throw new Error('Failed to fetch stats');
-      const data = await res.json();
+      const data = await apiGet('/api/stats');
       setStats(data);
       setError(null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => {
@@ -32,53 +25,23 @@ export function useStats() {
   return { stats, loading, error, refresh: fetchStats };
 }
 
-/**
- * Hook for fetching projects
- */
 export function useProjects() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/projects`);
-        const data = await res.json();
-        setProjects(data);
-      } catch (err) {
-        console.error('Failed to fetch projects:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProjects();
+    apiGet('/api/projects').then(setProjects).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   return { projects, loading };
 }
 
-/**
- * Hook for fetching tags
- */
 export function useTags() {
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTags = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/tags`);
-        const data = await res.json();
-        setTags(data);
-      } catch (err) {
-        console.error('Failed to fetch tags:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTags();
+    apiGet('/api/tags').then(setTags).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   return { tags, loading };

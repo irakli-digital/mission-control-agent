@@ -6,8 +6,11 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "cors": "^2.8.5",
     "express": "^4.21.0",
-    "pg": "^8.13.0"
+    "multer": "^2.0.2",
+    "pg": "^8.13.0",
+    "ws": "^8.19.0"
   }
 }
